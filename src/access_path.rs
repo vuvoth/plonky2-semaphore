@@ -1,7 +1,7 @@
 use anyhow::Result;
 use plonky2::hash::hash_types::MerkleCapTarget;
-use plonky2::hash::merkle_proofs::{MerkleProofTarget, MerkleProof};
-use plonky2::hash::merkle_tree::{MerkleTree, MerkleCap};
+use plonky2::hash::merkle_proofs::{MerkleProof, MerkleProofTarget};
+use plonky2::hash::merkle_tree::{MerkleCap, MerkleTree};
 use plonky2::hash::poseidon::PoseidonHash;
 use plonky2::iop::witness::PartialWitness;
 use plonky2::plonk::circuit_builder::CircuitBuilder;
@@ -14,7 +14,7 @@ use crate::signal::{Digest, Signal, C, F};
 pub struct AccessPath {
     pub merkle_proof: MerkleProof<F, PoseidonHash>,
     pub public_key_index: usize,
-    pub merkle_root: MerkleCap<F, PoseidonHash>
+    pub merkle_root: MerkleCap<F, PoseidonHash>,
 }
 
 impl AccessPath {
@@ -24,7 +24,9 @@ impl AccessPath {
         signal: Signal,
         verifier_data: &VerifierCircuitData<F, C, 2>,
     ) -> Result<()> {
-        let public_inputs: Vec<F> = self.merkle_proof.siblings
+        let public_inputs: Vec<F> = self
+            .merkle_root
+            .0
             .iter()
             .flat_map(|h| h.elements)
             .chain(signal.nullifier)
@@ -44,12 +46,19 @@ impl AccessPath {
         public_key_index: usize,
     ) -> Result<(Signal, VerifierCircuitData<F, C, 2>)> {
         let nullifier = PoseidonHash::hash_no_pad(&[private_key, topic].concat()).elements;
-        let config = CircuitConfig::standard_recursion_zk_config();
+        let config = CircuitConfig::standard_recursion_config();
         let mut builder = CircuitBuilder::new(config);
         let mut pw = PartialWitness::new();
 
         let targets = self.semaphore_circuit(&mut builder);
-        self.fill_semaphore_targets(&mut pw, private_key, topic, public_key_index, targets, self.merkle_root.0[0]);
+        self.fill_semaphore_targets(
+            &mut pw,
+            private_key,
+            topic,
+            public_key_index,
+            targets,
+            self.merkle_root.0[0],
+        );
 
         let data = builder.build();
         let proof = data.prove(pw)?;

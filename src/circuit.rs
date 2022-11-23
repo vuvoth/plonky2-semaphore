@@ -9,7 +9,7 @@ use plonky2::iop::target::Target;
 use plonky2::iop::witness::{PartialWitness, Witness};
 use plonky2::plonk::circuit_builder::CircuitBuilder;
 
-use crate::access_set::AccessPath;
+use crate::access_path::AccessPath;
 use crate::signal::{Digest, F};
 
 pub struct SemaphoreTargets {
@@ -92,13 +92,13 @@ impl AccessPath {
             F::from_canonical_usize(public_key_index),
         );
 
-        // let merkle_proof = self.0.prove(public_key_index);
         for (ht, h) in merkle_proof_target
             .siblings
             .into_iter()
-            .zip(self.merkle_proof.siblings)
+            .zip(self.merkle_proof.siblings.clone())
         {
             pw.set_hash_target(ht, h);
         }
+
     }
 }
