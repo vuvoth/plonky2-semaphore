@@ -1,5 +1,7 @@
 use anyhow::Result;
-use plonky2::hash::merkle_tree::MerkleTree;
+use plonky2::hash::hash_types::MerkleCapTarget;
+use plonky2::hash::merkle_proofs::{MerkleProofTarget, MerkleProof};
+use plonky2::hash::merkle_tree::{MerkleTree, MerkleCap};
 use plonky2::hash::poseidon::PoseidonHash;
 use plonky2::iop::witness::PartialWitness;
 use plonky2::plonk::circuit_builder::CircuitBuilder;
@@ -9,19 +11,20 @@ use plonky2::plonk::proof::ProofWithPublicInputs;
 
 use crate::signal::{Digest, Signal, C, F};
 
-pub struct AccessSet(pub MerkleTree<F, PoseidonHash>);
+pub struct AccessPath {
+    pub merkle_proof: MerkleProof<F, PoseidonHash>,
+    pub public_key_index: usize,
+    pub merkle_root: MerkleCap<F, PoseidonHash>
+}
 
-impl AccessSet {
+impl AccessPath {
     pub fn verify_signal(
         &self,
         topic: Digest,
         signal: Signal,
         verifier_data: &VerifierCircuitData<F, C, 2>,
     ) -> Result<()> {
-        let public_inputs: Vec<F> = self
-            .0
-            .cap
-            .0
+        let public_inputs: Vec<F> = self.merkle_proof.siblings
             .iter()
             .flat_map(|h| h.elements)
             .chain(signal.nullifier)
@@ -46,7 +49,7 @@ impl AccessSet {
         let mut pw = PartialWitness::new();
 
         let targets = self.semaphore_circuit(&mut builder);
-        self.fill_semaphore_targets(&mut pw, private_key, topic, public_key_index, targets);
+        self.fill_semaphore_targets(&mut pw, private_key, topic, public_key_index, targets, self.merkle_root.0[0]);
 
         let data = builder.build();
         let proof = data.prove(pw)?;

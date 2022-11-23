@@ -3,10 +3,10 @@ use plonky2::plonk::circuit_builder::CircuitBuilder;
 use plonky2::plonk::circuit_data::{CircuitConfig, VerifierCircuitData, VerifierCircuitTarget};
 use plonky2::plonk::proof::ProofWithPublicInputs;
 
-use crate::access_set::AccessSet;
+use crate::access_set::AccessPath;
 use crate::signal::{Digest, PlonkyProof, Signal, C, F};
 
-impl AccessSet {
+impl AccessPath {
     pub fn aggregate_signals(
         &self,
         topic0: Digest,
@@ -20,18 +20,14 @@ impl AccessSet {
         let mut pw = PartialWitness::new();
 
         let public_inputs0: Vec<F> = self
-            .0
-            .cap
-            .0
+            .merkle_proof.siblings
             .iter()
             .flat_map(|h| h.elements)
             .chain(signal0.nullifier)
             .chain(topic0)
             .collect();
         let public_inputs1: Vec<F> = self
-            .0
-            .cap
-            .0
+            .merkle_proof.siblings
             .iter()
             .flat_map(|h| h.elements)
             .chain(signal1.nullifier)

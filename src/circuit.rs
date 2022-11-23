@@ -1,12 +1,15 @@
+use std::hash::Hash;
+
 use plonky2::field::field_types::Field;
-use plonky2::hash::hash_types::{HashOutTarget, MerkleCapTarget};
+use plonky2::field::goldilocks_field::GoldilocksField;
+use plonky2::hash::hash_types::{HashOutTarget, MerkleCapTarget, HashOut};
 use plonky2::hash::merkle_proofs::MerkleProofTarget;
 use plonky2::hash::poseidon::PoseidonHash;
 use plonky2::iop::target::Target;
 use plonky2::iop::witness::{PartialWitness, Witness};
 use plonky2::plonk::circuit_builder::CircuitBuilder;
 
-use crate::access_set::AccessSet;
+use crate::access_set::AccessPath;
 use crate::signal::{Digest, F};
 
 pub struct SemaphoreTargets {
@@ -17,9 +20,9 @@ pub struct SemaphoreTargets {
     public_key_index: Target,
 }
 
-impl AccessSet {
+impl AccessPath {
     pub fn tree_height(&self) -> usize {
-        self.0.leaves.len().trailing_zeros() as usize
+       self.merkle_proof.siblings.len()
     }
 
     pub fn semaphore_circuit(&self, builder: &mut CircuitBuilder<F, 2>) -> SemaphoreTargets {
@@ -71,16 +74,17 @@ impl AccessSet {
         topic: Digest,
         public_key_index: usize,
         targets: SemaphoreTargets,
+        merkle_root_value: HashOut<F> 
     ) {
         let SemaphoreTargets {
-            merkle_root,
+            merkle_root: merkle_root_target,
             topic: topic_target,
             merkle_proof: merkle_proof_target,
             private_key: private_key_target,
             public_key_index: public_key_index_target,
         } = targets;
 
-        pw.set_hash_target(merkle_root, self.0.cap.0[0]);
+        pw.set_hash_target(merkle_root_target, merkle_root_value);
         pw.set_targets(&private_key_target, &private_key);
         pw.set_targets(&topic_target, &topic);
         pw.set_target(
@@ -88,11 +92,11 @@ impl AccessSet {
             F::from_canonical_usize(public_key_index),
         );
 
-        let merkle_proof = self.0.prove(public_key_index);
+        // let merkle_proof = self.0.prove(public_key_index);
         for (ht, h) in merkle_proof_target
             .siblings
             .into_iter()
-            .zip(merkle_proof.siblings)
+            .zip(self.merkle_proof.siblings)
         {
             pw.set_hash_target(ht, h);
         }

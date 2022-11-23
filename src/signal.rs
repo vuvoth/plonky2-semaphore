@@ -21,7 +21,7 @@ mod tests {
     use plonky2::hash::poseidon::PoseidonHash;
     use plonky2::plonk::config::Hasher;
 
-    use crate::access_set::AccessSet;
+    use crate::access_set::AccessPath;
     use crate::signal::{Digest, F};
 
     #[test]
@@ -36,7 +36,13 @@ mod tests {
                     .to_vec()
             })
             .collect();
-        let access_set = AccessSet(MerkleTree::new(public_keys, 0));
+        let merkle_tree = MerkleTree::new(public_keys, 0);
+
+        let access_set = AccessPath {
+            merkle_proof: merkle_tree.prove(12),
+            public_key_index: 12,
+            merkle_root: merkle_tree.cap
+        };
 
         let i = 12;
         let topic = F::rand_arr();
