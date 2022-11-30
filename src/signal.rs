@@ -15,19 +15,24 @@ pub struct Signal {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::prelude::*;
+
     use anyhow::Result;
     use plonky2::field::field_types::Field;
     use plonky2::hash::merkle_tree::MerkleTree;
     use plonky2::hash::poseidon::PoseidonHash;
     use plonky2::plonk::circuit_data::VerifierCircuitData;
     use plonky2::plonk::config::Hasher;
+    use plonky2_circom_verifier::verifier::generate_verifier_config;
+    use serde_json::json;
 
     use crate::access_path::AccessPath;
     use crate::signal::{Digest, C, F};
 
     #[test]
     fn test_semaphore() -> Result<()> {
-        let n = 1 << 10;
+        let n = 1 << 5;
         let private_keys: Vec<Digest> = (0..n).map(|_| F::rand_arr()).collect();
         let public_keys: Vec<Vec<F>> = private_keys
             .iter()
@@ -71,8 +76,16 @@ mod tests {
         let (signal_1, vd_1) = access_path_1.make_signal(private_keys[leaf_1], topic, leaf_1)?;
 
         // let vdr: VerifierCircuitData<F, C, 2>;
-        access_path.aggregate_signals(topic, signal_0, topic, signal_1, &vd_0, &vd_1);
+        let (_, _, p) = access_path.aggregate_signals(topic, signal_0, topic, signal_1, &vd_0, &vd_1);
 
+        
+        
+        let data = json!(p);
+        
+        let mut buffer = File::create("proof.json")?;
+
+        buffer.write_all(data.to_string().as_bytes());
+        
         Ok(())
     }
 }

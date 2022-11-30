@@ -2,6 +2,7 @@ use plonky2::iop::witness::{PartialWitness, Witness};
 use plonky2::plonk::circuit_builder::CircuitBuilder;
 use plonky2::plonk::circuit_data::{CircuitConfig, VerifierCircuitData, VerifierCircuitTarget};
 use plonky2::plonk::proof::ProofWithPublicInputs;
+use plonky2_circom_verifier::verifier::{generate_circom_verifier, generate_verifier_config};
 
 use crate::access_path::AccessPath;
 use crate::signal::{Digest, PlonkyProof, Signal, C, F};
@@ -38,11 +39,12 @@ impl AccessPath {
             .collect();
 
         let proof_target0 = builder.add_virtual_proof_with_pis(&verifier_data_0.common);
+        
         pw.set_proof_with_pis_target(
             &proof_target0,
             &ProofWithPublicInputs {
                 proof: signal0.proof,
-                public_inputs: public_inputs0,
+                public_inputs: public_inputs0.clone(),
             },
         );
         let proof_target1 = builder.add_virtual_proof_with_pis(&verifier_data_1.common);
@@ -50,7 +52,7 @@ impl AccessPath {
             &proof_target1,
             &ProofWithPublicInputs {
                 proof: signal1.proof,
-                public_inputs: public_inputs1,
+                public_inputs: public_inputs1.clone(),
             },
         );
 
@@ -63,14 +65,25 @@ impl AccessPath {
             &verifier_data_0.verifier_only.constants_sigmas_cap,
         );
 
+        builder.register_public_inputs(&proof_target0.public_inputs);
+        builder.register_public_inputs(&proof_target1.public_inputs);
+
+
         builder.verify_proof(proof_target0, &vd_target, &verifier_data_0.common);
         builder.verify_proof(proof_target1, &vd_target, &verifier_data_1.common);
 
+        
         let data = builder.build();
         let recursive_proof = data.prove(pw).unwrap();
 
+
         data.verify(recursive_proof.clone()).unwrap();
 
+        println!("{:?}", recursive_proof.public_inputs);
+
+        // let config = generate_verifier_config(&ProofWithPublicInputs { proof: recursive_proof.proof, public_inputs: recursive_proof.public_inputs });
+
+        
         (signal0.nullifier, signal1.nullifier, recursive_proof.proof)
     }
 }

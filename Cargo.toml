@@ -1,10 +1,13 @@
 [package]
+edition = "2021"
 name = "plonky2-semaphore"
 version = "0.1.0"
-edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-plonky2 = { git = "https://github.com/mir-protocol/plonky2", branch = "semaphore-example" }
+plonky2 = {git = "https://github.com/mir-protocol/plonky2", branch = "semaphore-example"}
+# plonky2 = { git = "https://github.com/polymerdao/plonky2", rev = "3a5abe23" }
 anyhow = "1.0.56"
+plonky2_circom_verifier = {git = "https://github.com/vuvoth/plonky2-circom", version = "0.1.0"}
+serde_json = "1.0.89"

@@ -62,7 +62,7 @@ impl AccessPath {
 
         let data = builder.build();
         let proof = data.prove(pw)?;
-
+        println!("{:?}", proof.public_inputs);
         Ok((
             Signal {
                 nullifier,
