@@ -44,7 +44,7 @@ impl AccessPath {
         private_key: Digest,
         topic: Digest,
         public_key_index: usize,
-    ) -> Result<(Signal, VerifierCircuitData<F, C, 2>)> {
+    ) -> Result<(Signal, VerifierCircuitData<F, C, 2>, ProofWithPublicInputs<F, C, 2>)> {
         let nullifier = PoseidonHash::hash_no_pad(&[private_key, topic].concat()).elements;
         let config = CircuitConfig::standard_recursion_config();
         let mut builder = CircuitBuilder::new(config);
@@ -66,9 +66,10 @@ impl AccessPath {
         Ok((
             Signal {
                 nullifier,
-                proof: proof.proof,
+                proof: proof.clone().proof,
             },
             data.to_verifier_data(),
+            proof
         ))
     }
 }

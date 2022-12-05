@@ -10,40 +10,25 @@ use crate::signal::{Digest, PlonkyProof, Signal, C, F};
 impl AccessPath {
     pub fn aggregate_signals(
         &self,
-        topic0: Digest,
-        signal0: Signal,
-        topic1: Digest,
-        signal1: Signal,
+        p0: ProofWithPublicInputs<F, C, 2>, 
+        p1: ProofWithPublicInputs<F, C, 2>,
         verifier_data_0: &VerifierCircuitData<F, C, 2>,
         verifier_data_1: &VerifierCircuitData<F, C, 2>,
-    ) -> (Digest, Digest, PlonkyProof) {
+    ) -> (ProofWithPublicInputs<F, C, 2>, VerifierCircuitData<F, C, 2>){
         let config = CircuitConfig::standard_recursion_config();
         let mut builder = CircuitBuilder::new(config);
         let mut pw = PartialWitness::new();
 
-        let public_inputs0: Vec<F> = self
-            .merkle_root
-            .0
-            .iter()
-            .flat_map(|h| h.elements)
-            .chain(signal0.nullifier)
-            .chain(topic0)
-            .collect();
-        let public_inputs1: Vec<F> = self
-            .merkle_root
-            .0
-            .iter()
-            .flat_map(|h| h.elements)
-            .chain(signal1.nullifier)
-            .chain(topic1)
-            .collect();
+        let public_inputs0 = p0.public_inputs.clone();
+
+        let public_inputs1 = p1.public_inputs.clone();
 
         let proof_target0 = builder.add_virtual_proof_with_pis(&verifier_data_0.common);
         
         pw.set_proof_with_pis_target(
             &proof_target0,
             &ProofWithPublicInputs {
-                proof: signal0.proof,
+                proof: p0.proof,
                 public_inputs: public_inputs0.clone(),
             },
         );
@@ -51,7 +36,7 @@ impl AccessPath {
         pw.set_proof_with_pis_target(
             &proof_target1,
             &ProofWithPublicInputs {
-                proof: signal1.proof,
+                proof: p1.proof,
                 public_inputs: public_inputs1.clone(),
             },
         );
@@ -79,11 +64,9 @@ impl AccessPath {
 
         data.verify(recursive_proof.clone()).unwrap();
 
+        
         println!("{:?}", recursive_proof.public_inputs);
 
-        // let config = generate_verifier_config(&ProofWithPublicInputs { proof: recursive_proof.proof, public_inputs: recursive_proof.public_inputs });
-
-        
-        (signal0.nullifier, signal1.nullifier, recursive_proof.proof)
+        (recursive_proof, data.to_verifier_data())    
     }
 }

@@ -54,8 +54,8 @@ mod tests {
 
         let topic = F::rand_arr();
 
-        let (signal, vd) = access_path.make_signal(private_keys[leaf_index], topic, leaf_index)?;
-        access_path.verify_signal(topic, signal, &vd);
+        // let (signal, vd) = access_path.make_signal(private_keys[leaf_index], topic, leaf_index)?;
+        // access_path.verify_signal(topic, signal, &vd);
 
         //
         let leaf_0 = 10;
@@ -72,20 +72,32 @@ mod tests {
             merkle_root: merkle_tree.cap.clone(),
         };
 
-        let (signal_0, vd_0) = access_path_0.make_signal(private_keys[leaf_0], topic, leaf_0)?;
-        let (signal_1, vd_1) = access_path_1.make_signal(private_keys[leaf_1], topic, leaf_1)?;
+        let (signal_0, vd_0, p0) =
+            access_path_0.make_signal(private_keys[leaf_0], topic, leaf_0)?;
+        let (signal_1, vd_1, p1) =
+            access_path_1.make_signal(private_keys[leaf_1], topic, leaf_1)?;
 
         // let vdr: VerifierCircuitData<F, C, 2>;
-        let (_, _, p) = access_path.aggregate_signals(topic, signal_0, topic, signal_1, &vd_0, &vd_1);
+        let (pp0, vv_0) = access_path.aggregate_signals(p0, p1, &vd_0, &vd_1);
 
-        
-        
+        let (signal_0, vd_0, p0_) =
+            access_path_0.make_signal(private_keys[leaf_0], topic, leaf_0)?;
+        let (signal_1, vd_1, p1_) =
+            access_path_1.make_signal(private_keys[leaf_1], topic, leaf_1)?;
+
+        // let vdr: VerifierCircuitData<F, C, 2>;
+        let (pp1, vv_1) = access_path.aggregate_signals(p0_, p1_, &vd_0, &vd_1);
+
+        println!("{:?}", vv_0.common);
+        println!("{:?}", vv_1.common);
+        let (p, _) = access_path.aggregate_signals(pp0, pp1, &vd_0, &vd_1);
+
         let data = json!(p);
-        
+
         let mut buffer = File::create("proof.json")?;
 
         buffer.write_all(data.to_string().as_bytes());
-        
+
         Ok(())
     }
 }
